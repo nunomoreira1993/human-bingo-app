@@ -107,6 +107,7 @@ select:disabled {
 .primary-button,
 .ghost-button,
 .danger-button,
+.install-button,
 .icon-button,
 .tabbar button {
   display: inline-flex;
@@ -131,6 +132,19 @@ select:disabled {
   color: #8f2727;
   background: #fbe9e5;
   padding: 0 14px;
+}
+
+.install-button {
+  width: 100%;
+  margin-top: 18px;
+  color: #263d35;
+  background: #f5c66a;
+  padding: 0 16px;
+}
+
+.app-install-button {
+  margin-top: 0;
+  border: 1px solid rgba(38, 61, 53, 0.14);
 }
 
 .icon-button {

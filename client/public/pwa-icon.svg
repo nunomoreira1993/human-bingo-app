@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#263d35"/>
+  <path fill="#f5c66a" d="M112 112h288v76H112zM112 218h288v76H112zM112 324h288v76H112z" opacity=".2"/>
+  <circle cx="136" cy="150" r="31" fill="#f5c66a"/>
+  <circle cx="376" cy="150" r="31" fill="#ffffff"/>
+  <circle cx="136" cy="256" r="31" fill="#ffffff"/>
+  <circle cx="376" cy="256" r="31" fill="#f5c66a"/>
+  <circle cx="136" cy="362" r="31" fill="#f5c66a"/>
+  <circle cx="376" cy="362" r="31" fill="#ffffff"/>
+  <text x="256" y="301" text-anchor="middle" font-family="Georgia, serif" font-size="128" font-weight="800" fill="#ffffff">BH</text>
+</svg>

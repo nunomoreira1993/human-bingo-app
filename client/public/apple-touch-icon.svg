@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#263d35"/>
+  <circle cx="48" cy="48" r="13" fill="#f5c66a"/>
+  <circle cx="132" cy="48" r="13" fill="#ffffff"/>
+  <circle cx="48" cy="90" r="13" fill="#ffffff"/>
+  <circle cx="132" cy="90" r="13" fill="#f5c66a"/>
+  <circle cx="48" cy="132" r="13" fill="#f5c66a"/>
+  <circle cx="132" cy="132" r="13" fill="#ffffff"/>
+  <text x="90" y="104" text-anchor="middle" font-family="Georgia, serif" font-size="46" font-weight="800" fill="#ffffff">BH</text>
+</svg>

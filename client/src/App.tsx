@@ -83,6 +83,11 @@ type Notice = {
   text: string
 }
 
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
 const emptyUserForm = {
   name: '',
   email: '',
@@ -190,6 +195,8 @@ function App() {
   const [editingFactId, setEditingFactId] = useState<number | null>(null)
   const [factForm, setFactForm] = useState(emptyFactForm)
   const [gameForm, setGameForm] = useState({ name: 'Bingo Humano', status: 'draft', closesAt: '' })
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
+  const [canInstall, setCanInstall] = useState(false)
 
   const isAdmin = user?.role === 'admin'
   const closed = Boolean(game?.isClosed)
@@ -242,6 +249,31 @@ function App() {
     const meta = viewMeta[view]
     updatePageMeta(meta.title, meta.description)
   }, [closed, game?.name, token, user, view])
+
+  useEffect(() => {
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean }
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || Boolean(navigatorWithStandalone.standalone)
+
+    if (isStandalone) return
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event as InstallPromptEvent)
+      setCanInstall(true)
+    }
+    const handleAppInstalled = () => {
+      setInstallPrompt(null)
+      setCanInstall(false)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
 
   async function loadData(authToken = token) {
     if (!authToken) return
@@ -334,6 +366,19 @@ function App() {
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível entrar.' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleInstallApp() {
+    if (!installPrompt) return
+
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+    setInstallPrompt(null)
+    setCanInstall(false)
+
+    if (choice.outcome === 'accepted') {
+      setNotice({ tone: 'success', text: 'App instalada com sucesso.' })
     }
   }
 
@@ -509,6 +554,11 @@ function App() {
           <p className="eyebrow">Festa de equipa</p>
           <h1>Bingo Humano</h1>
           <p className="login-copy">Entra, fala com colegas e tenta ligar cada curiosidade à pessoa certa.</p>
+          {canInstall && (
+            <button className="install-button" type="button" onClick={() => void handleInstallApp()}>
+              <Download size={18} /> Instalar app
+            </button>
+          )}
           <form className="form-stack" onSubmit={handleLogin}>
             {notice && <div className={`notice form-notice ${notice.tone}`}>{notice.text}</div>}
             <label>
@@ -536,6 +586,11 @@ function App() {
           <p className="eyebrow">Primeiro acesso</p>
           <h1>Define a tua password</h1>
           <p className="login-copy">Por segurança, troca a password inicial antes de entrares no jogo.</p>
+          {canInstall && (
+            <button className="install-button" type="button" onClick={() => void handleInstallApp()}>
+              <Download size={18} /> Instalar app
+            </button>
+          )}
           <form className="form-stack" onSubmit={handleChangePassword}>
             {notice && <div className={`notice form-notice ${notice.tone}`}>{notice.text}</div>}
             <label>
@@ -581,6 +636,12 @@ function App() {
           {answeredCount}/{totalFacts}
         </div>
       </section>
+
+      {canInstall && (
+        <button className="install-button app-install-button" type="button" onClick={() => void handleInstallApp()}>
+          <Download size={18} /> Instalar app
+        </button>
+      )}
 
       <nav className="tabbar" aria-label="Navegação principal">
         <button className={view === 'match' ? 'active' : ''} onClick={() => setView('match')} type="button">

@@ -1,0 +1,26 @@
+{
+  "name": "Bingo Humano",
+  "short_name": "Bingo",
+  "description": "Uma experiência digital para descobrir curiosidades da equipa, incentivar conversas e transformar o convívio num desafio divertido.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf7ef",
+  "theme_color": "#263d35",
+  "categories": ["games", "social", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
