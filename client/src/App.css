@@ -6,7 +6,7 @@
 .login-shell {
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   background:
     radial-gradient(circle at 20% 10%, rgba(255, 183, 77, 0.28), transparent 28%),
     radial-gradient(circle at 90% 0%, rgba(54, 179, 126, 0.2), transparent 30%),
@@ -80,6 +80,7 @@ textarea {
   background: #fff;
   color: var(--text);
   font: inherit;
+  font-size: 16px;
   min-height: 46px;
   padding: 11px 12px;
 }
@@ -182,7 +183,14 @@ select:disabled {
   gap: 16px;
   width: min(100%, 980px);
   margin: 0 auto;
-  padding: 18px 14px 92px;
+  padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+
+@supports (-webkit-touch-callout: none) {
+  .login-shell,
+  .app-shell {
+    min-height: -webkit-fill-available;
+  }
 }
 
 .topbar,

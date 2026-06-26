@@ -251,6 +251,16 @@ function App() {
   }, [closed, game?.name, token, user, view])
 
   useEffect(() => {
+    if (!notice) return
+
+    const timeout = window.setTimeout(() => {
+      setNotice(null)
+    }, 4000)
+
+    return () => window.clearTimeout(timeout)
+  }, [notice])
+
+  useEffect(() => {
     const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean }
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || Boolean(navigatorWithStandalone.standalone)
 

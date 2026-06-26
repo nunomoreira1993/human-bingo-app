@@ -29,8 +29,18 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
+  min-width: 320px;
+  touch-action: manipulation;
 }
 
 button,
