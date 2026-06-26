@@ -1,6 +1,6 @@
 # Bingo Humano
 
-Aplicacao web/mobile-first para um jogo interno de equipa. O frontend e feito em React + Vite e o backend em Node.js + Express, com Prisma ligado a MySQL, autenticacao JWT e passwords com hash bcrypt.
+Aplicacao web/mobile-first para descobrir curiosidades da equipa, incentivar conversas entre colegas e transformar um evento presencial num desafio participativo. O frontend e feito em React + Vite e o backend em Node.js + Express, com Prisma ligado a MySQL, autenticacao JWT e passwords com hash bcrypt.
 
 ## Arquitetura
 

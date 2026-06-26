@@ -230,7 +230,7 @@ function App() {
     }
 
     if (!token || !user) {
-      updatePageMeta('Login | Bingo Humano', 'Entra na área reservada do jogo interno Bingo Humano.')
+      updatePageMeta('Login | Bingo Humano', 'Descobre curiosidades da equipa, conversa com colegas e participa no desafio Bingo Humano.')
       return
     }
 
