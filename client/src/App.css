@@ -414,6 +414,27 @@ select:disabled {
   overflow-wrap: anywhere;
 }
 
+.admin-list article.fact-admin-card {
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.fact-admin-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fact-admin-actions {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 156px;
+}
+
 small {
   color: var(--muted);
 }
@@ -561,6 +582,10 @@ small {
     grid-template-columns: repeat(2, minmax(92px, 1fr));
     flex: 0 0 200px;
     width: 200px;
+  }
+
+  .fact-admin-actions {
+    min-width: 200px;
   }
 
   .tabbar {

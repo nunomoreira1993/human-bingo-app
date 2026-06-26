@@ -863,11 +863,14 @@ function App() {
               <h2>Lista de curiosidades</h2>
               <div className="admin-list">
                 {facts.map((fact) => (
-                  <article key={fact.id}>
-                    <div><strong>{fact.text}</strong><small>{fact.correctPerson?.name ?? 'Sem pessoa'} · <span className={fact.active ? 'state-active' : 'state-inactive'}>{fact.active ? 'Ativa' : 'Inativa'}</span></small></div>
-                    <div className="button-row compact-row">
-                      <button className="ghost-button" type="button" onClick={() => { setEditingFactId(fact.id); setFactForm({ text: fact.text, correctPersonId: String(fact.correctPersonId ?? ''), active: fact.active }) }}>Editar</button>
-                      <button className="danger-button" type="button" onClick={() => void deleteFact(fact.id)}>Remover</button>
+                  <article className="fact-admin-card" key={fact.id}>
+                    <strong>{fact.text}</strong>
+                    <div className="fact-admin-footer">
+                      <small>{fact.correctPerson?.name ?? 'Sem pessoa'} · <span className={fact.active ? 'state-active' : 'state-inactive'}>{fact.active ? 'Ativa' : 'Inativa'}</span></small>
+                      <div className="button-row compact-row fact-admin-actions">
+                        <button className="ghost-button" type="button" onClick={() => { setEditingFactId(fact.id); setFactForm({ text: fact.text, correctPersonId: String(fact.correctPersonId ?? ''), active: fact.active }) }}>Editar</button>
+                        <button className="danger-button" type="button" onClick={() => void deleteFact(fact.id)}>Remover</button>
+                      </div>
                     </div>
                   </article>
                 ))}
