@@ -510,6 +510,7 @@ function App() {
           <h1>Bingo Humano</h1>
           <p className="login-copy">Entra, fala com colegas e tenta ligar cada curiosidade à pessoa certa.</p>
           <form className="form-stack" onSubmit={handleLogin}>
+            {notice && <div className={`notice form-notice ${notice.tone}`}>{notice.text}</div>}
             <label>
               E-mail
               <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
@@ -522,7 +523,6 @@ function App() {
               <Lock size={18} /> Entrar
             </button>
           </form>
-          {notice && <div className={`notice ${notice.tone}`}>{notice.text}</div>}
         </section>
       </main>
     )
