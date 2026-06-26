@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap');
+
+:root {
+  --bg: #fbf7ef;
+  --surface: #ffffff;
+  --text: #3b332d;
+  --text-strong: #1f2f2a;
+  --muted: #766f65;
+  --border: #e3d8c7;
+  --heading: 'Fraunces', Georgia, serif;
+  --sans: 'Atkinson Hyperlegible', Verdana, sans-serif;
+
+  color: var(--text);
+  background:
+    linear-gradient(90deg, rgba(38, 61, 53, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(38, 61, 53, 0.04) 1px, transparent 1px),
+    var(--bg);
+  background-size: 28px 28px;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  letter-spacing: 0;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}

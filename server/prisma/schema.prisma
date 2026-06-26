@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLAYER @map("player")
+  ADMIN  @map("admin")
+}
+
+enum GameStatus {
+  DRAFT  @map("draft")
+  OPEN   @map("open")
+  CLOSED @map("closed")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(150)
+  email        String   @unique @db.VarChar(191)
+  passwordHash String   @map("password_hash") @db.VarChar(191)
+  passwordResetRequired Boolean @default(true) @map("password_reset_required")
+  role         Role     @default(PLAYER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  correctFacts Fact[]  @relation("CorrectPerson")
+  guesses      Guess[] @relation("PlayerGuesses")
+  selectedIn   Guess[] @relation("SelectedPerson")
+
+  @@map("users")
+}
+
+model Fact {
+  id              Int      @id @default(autoincrement())
+  text            String   @db.Text
+  correctPersonId Int      @map("correct_person_id")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  correctPerson User    @relation("CorrectPerson", fields: [correctPersonId], references: [id], onDelete: Restrict)
+  guesses       Guess[]
+
+  @@index([correctPersonId])
+  @@map("facts")
+}
+
+model Guess {
+  id               Int      @id @default(autoincrement())
+  playerId         Int      @map("player_id")
+  factId           Int      @map("fact_id")
+  selectedPersonId Int      @map("selected_person_id")
+  submittedAt      DateTime @default(now()) @map("submitted_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  player         User @relation("PlayerGuesses", fields: [playerId], references: [id], onDelete: Cascade)
+  fact           Fact @relation(fields: [factId], references: [id], onDelete: Cascade)
+  selectedPerson User @relation("SelectedPerson", fields: [selectedPersonId], references: [id], onDelete: Restrict)
+
+  @@unique([playerId, factId], name: "unique_player_fact")
+  @@index([factId])
+  @@index([selectedPersonId])
+  @@map("guesses")
+}
+
+model Game {
+  id        Int        @id @default(autoincrement())
+  name      String     @default("Bingo Humano") @db.VarChar(150)
+  status    GameStatus @default(DRAFT)
+  closesAt  DateTime?  @map("closes_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("games")
+}
