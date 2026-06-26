@@ -406,6 +406,12 @@ select:disabled {
 .ranking-row > div {
   display: grid;
   gap: 4px;
+  min-width: 0;
+}
+
+.admin-list article strong,
+.admin-list article small {
+  overflow-wrap: anywhere;
 }
 
 small {
@@ -461,17 +467,20 @@ small {
 .admin-panel {
   padding: 14px;
   align-content: start;
+  min-width: 0;
 }
 
 .admin-layout {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .admin-column {
   display: grid;
   align-content: start;
   gap: 14px;
+  min-width: 0;
 }
 
 .admin-screen > .admin-panel,
@@ -488,9 +497,9 @@ small {
 
 .compact-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(92px, 1fr));
-  flex: 0 0 200px;
-  width: 200px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 1 1 100%;
+  width: 100%;
 }
 
 .compact-row button {
@@ -546,6 +555,12 @@ small {
   .admin-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .compact-row {
+    grid-template-columns: repeat(2, minmax(92px, 1fr));
+    flex: 0 0 200px;
+    width: 200px;
   }
 
   .tabbar {
