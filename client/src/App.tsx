@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import {
   BarChart3,
   CheckCircle2,
+  Clock3,
   Download,
   Edit3,
   Lock,
@@ -170,6 +171,23 @@ function formatDeadline(value: string | null) {
   }).format(new Date(value))
 }
 
+function getCountdownParts(value: string | null, now: number) {
+  if (!value) return null
+
+  const remainingSeconds = Math.max(0, Math.ceil((new Date(value).getTime() - now) / 1000))
+  const days = Math.floor(remainingSeconds / 86400)
+  const hours = Math.floor((remainingSeconds % 86400) / 3600)
+  const minutes = Math.floor((remainingSeconds % 3600) / 60)
+  const seconds = remainingSeconds % 60
+
+  return [
+    { label: 'dias', value: String(days).padStart(2, '0') },
+    { label: 'horas', value: String(hours).padStart(2, '0') },
+    { label: 'min', value: String(minutes).padStart(2, '0') },
+    { label: 'seg', value: String(seconds).padStart(2, '0') },
+  ]
+}
+
 function toDatetimeLocal(value: string | null) {
   if (!value) return ''
   const date = new Date(value)
@@ -229,6 +247,7 @@ function App() {
   const [gameForm, setGameForm] = useState({ name: 'Bingo Humano', status: 'draft', closesAt: '' })
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [canInstall, setCanInstall] = useState(false)
+  const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   const isAdmin = user?.role === 'admin'
   const closed = Boolean(game?.isClosed)
@@ -238,6 +257,7 @@ function App() {
   const guessedByFact = new Map(guesses.map((guess) => [guess.factId, guess]))
   const filteredFacts = facts.filter((fact) => fact.text.toLowerCase().includes(factSearch.toLowerCase()))
   const filteredPeople = users.filter((person) => person.name.toLowerCase().includes(personSearch.toLowerCase()))
+  const answerRevealCountdown = getCountdownParts(game?.closesAt ?? null, currentTime)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -260,6 +280,20 @@ function App() {
 
     syncBrowserPath(viewRoutes[view])
   }, [isAdmin, sessionReady, token, user, view])
+
+  useEffect(() => {
+    if (closed || !game?.closesAt) return
+
+    const interval = window.setInterval(() => setCurrentTime(Date.now()), 1000)
+
+    return () => window.clearInterval(interval)
+  }, [closed, game?.closesAt])
+
+  useEffect(() => {
+    if (closed || !game?.closesAt || new Date(game.closesAt).getTime() > currentTime) return
+
+    void loadData()
+  }, [closed, currentTime, game?.closesAt])
 
   useEffect(() => {
     const gameName = game?.name ?? 'Bingo Humano'
@@ -873,7 +907,28 @@ function App() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">As respostas corretas só aparecem após o jogo finalizar.</p>
+            <div className="reveal-countdown" aria-live="polite">
+              <div>
+                <Clock3 size={22} />
+                <div>
+                  <p className="eyebrow">Unlock das soluções</p>
+                  <h3>{game?.closesAt ? 'Countdown até ao reveal' : 'Reveal pendente'}</h3>
+                </div>
+              </div>
+              {answerRevealCountdown ? (
+                <div className="countdown-grid" aria-label={`Tempo até as respostas corretas aparecerem: ${answerRevealCountdown.map((part) => `${part.value} ${part.label}`).join(', ')}`}>
+                  {answerRevealCountdown.map((part) => (
+                    <span key={part.label}>
+                      <strong>{part.value}</strong>
+                      <small>{part.label}</small>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p>Assim que a equipa de admin definir um deadline, mostramos aqui o countdown para o reveal.</p>
+              )}
+              <p>As respostas corretas só aparecem após o jogo finalizar.</p>
+            </div>
           )}
         </section>
       )}

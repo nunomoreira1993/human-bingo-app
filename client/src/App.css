@@ -386,6 +386,75 @@ select:disabled {
   color: #2c7956;
 }
 
+.reveal-countdown {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(38, 61, 53, 0.16);
+  border-radius: 8px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(245, 198, 106, 0.28), rgba(255, 255, 255, 0.92) 42%),
+    #fff;
+  box-shadow: 0 18px 48px rgba(45, 31, 22, 0.08);
+}
+
+.reveal-countdown > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reveal-countdown svg {
+  flex: 0 0 auto;
+  color: #d8842f;
+}
+
+.reveal-countdown h3,
+.reveal-countdown p {
+  margin: 0;
+}
+
+.reveal-countdown h3 {
+  color: var(--text-strong);
+  font-family: var(--heading);
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.reveal-countdown > p {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.countdown-grid span {
+  display: grid;
+  place-items: center;
+  min-height: 78px;
+  border: 1px solid rgba(38, 61, 53, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.countdown-grid strong {
+  color: #263d35;
+  font-family: var(--heading);
+  font-size: clamp(26px, 8vw, 38px);
+  line-height: 1;
+}
+
+.countdown-grid small {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .match-state,
 .result {
   display: inline-flex;
