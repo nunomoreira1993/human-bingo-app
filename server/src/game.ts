@@ -30,7 +30,7 @@ export async function requireGameOpen() {
   const game = await getGame()
 
   if (!isGameOpen(game)) {
-    throw Object.assign(new Error('O jogo está fechado. Já não é possível alterar respostas.'), {
+    throw Object.assign(new Error('O jogo já finalizou. Já não é possível alterar respostas.'), {
       statusCode: 409,
     })
   }

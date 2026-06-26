@@ -73,7 +73,7 @@ async function ensureClosedGame() {
 	const game = await closeGameIfDeadlinePassed()
 
 	if (!isGameClosed(game)) {
-		throw Object.assign(new Error('Resultados disponíveis apenas depois do fecho do jogo.'), {
+		throw Object.assign(new Error('Resultados disponíveis apenas após o jogo finalizar.'), {
 			statusCode: 403,
 		})
 	}
@@ -599,7 +599,7 @@ app.get(
 	asyncHandler(async (_req, res) => {
 		await ensureClosedGame()
 		const ranking = await buildRanking()
-		const header = ['posicao', 'jogador', 'certas', 'submetidas', 'pontuacao']
+		const header = ['posicao', 'player', 'corretas', 'submetidas', 'score']
 		const lines = [header.map(csvEscape).join(',')]
 
 		for (const row of ranking) {

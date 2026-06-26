@@ -186,6 +186,13 @@ select:disabled {
   padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
 }
 
+.session-loading {
+  min-height: 100svh;
+  place-items: center;
+  align-content: center;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
 @supports (-webkit-touch-callout: none) {
   .login-shell,
   .app-shell {
@@ -293,10 +300,13 @@ select:disabled {
 }
 
 .tabbar button {
-  min-height: 50px;
+  min-height: 56px;
+  padding: 4px 2px;
   color: var(--muted);
   background: transparent;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.1;
+  text-align: center;
   flex-direction: column;
 }
 
@@ -541,6 +551,10 @@ small {
   color: #fff;
   background: #263d35;
   font-weight: 800;
+}
+
+.session-loading .loading {
+  position: static;
 }
 
 @media (min-width: 720px) {

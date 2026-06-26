@@ -88,6 +88,37 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
+const viewRoutes: Record<View, string> = {
+  match: '/matches',
+  mine: '/minhas-respostas',
+  ranking: '/ranking',
+  answers: '/solucoes',
+  admin: '/admin',
+}
+
+const routeViews: Record<string, View> = {
+  '/': 'match',
+  '/matches': 'match',
+  '/minhas-respostas': 'mine',
+  '/ranking': 'ranking',
+  '/solucoes': 'answers',
+  '/admin': 'admin',
+}
+
+function getStoredToken() {
+  return localStorage.getItem('bingo_token') ?? ''
+}
+
+function viewFromPath(pathname: string) {
+  return routeViews[pathname.replace(/\/$/, '') || '/'] ?? null
+}
+
+function syncBrowserPath(pathname: string, mode: 'push' | 'replace' = 'push') {
+  if (window.location.pathname === pathname) return
+
+  window.history[mode === 'push' ? 'pushState' : 'replaceState']({}, '', pathname)
+}
+
 const emptyUserForm = {
   name: '',
   email: '',
@@ -118,7 +149,7 @@ async function apiRequest<T>(path: string, token?: string, options: RequestInit 
   const data = text ? JSON.parse(text) : null
 
   if (!response.ok) {
-    throw new Error(data?.message ?? 'Não foi possível concluir o pedido.')
+    throw new Error(data?.message ?? 'Não foi possível processar o request.')
   }
 
   return data as T
@@ -129,7 +160,7 @@ function normalizeStatus(status: GameStatus) {
 }
 
 function formatDeadline(value: string | null) {
-  if (!value) return 'Sem prazo definido'
+  if (!value) return 'Sem deadline definido'
 
   return new Intl.DateTimeFormat('pt-PT', {
     day: '2-digit',
@@ -169,9 +200,10 @@ function updatePageMeta(title: string, description: string) {
 }
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('bingo_token') ?? '')
+  const [token, setToken] = useState(getStoredToken)
+  const [sessionReady, setSessionReady] = useState(() => !getStoredToken())
   const [user, setUser] = useState<ApiUser | null>(null)
-  const [view, setView] = useState<View>('match')
+  const [view, setView] = useState<View>(() => viewFromPath(window.location.pathname) ?? 'match')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -208,36 +240,58 @@ function App() {
   const filteredPeople = users.filter((person) => person.name.toLowerCase().includes(personSearch.toLowerCase()))
 
   useEffect(() => {
+    const handlePopState = () => {
+      setView(viewFromPath(window.location.pathname) ?? 'match')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (!sessionReady || !token || !user || user.passwordResetRequired) return
+
+    if (view === 'admin' && !isAdmin) {
+      setView('match')
+      syncBrowserPath(viewRoutes.match, 'replace')
+      return
+    }
+
+    syncBrowserPath(viewRoutes[view])
+  }, [isAdmin, sessionReady, token, user, view])
+
+  useEffect(() => {
     const gameName = game?.name ?? 'Bingo Humano'
     const viewMeta: Record<View, { title: string; description: string }> = {
       match: {
         title: `Matches | ${gameName}`,
-        description: 'Associa cada curiosidade à pessoa da equipa que achas correta.',
+        description: 'Faz match entre cada curiosidade e a pessoa da equipa que te parece certa.',
       },
       mine: {
         title: `As minhas respostas | ${gameName}`,
-        description: 'Consulta e gere as tuas respostas submetidas no Bingo Humano.',
+        description: 'Revê e gere as tuas respostas submetidas no Bingo Humano.',
       },
       ranking: {
         title: `Ranking | ${gameName}`,
         description: closed
-          ? 'Consulta a classificação final com respostas certas, submetidas e pontuação total.'
-          : 'O ranking fica disponível quando o jogo fechar.',
+          ? 'Consulta o ranking final com respostas corretas, submissões e score total.'
+          : 'O ranking fica disponível quando o jogo finalizar.',
       },
       answers: {
-        title: `Respostas corretas | ${gameName}`,
+        title: `Soluções | ${gameName}`,
         description: closed
           ? 'Vê a correspondência correta entre cada curiosidade e a respetiva pessoa.'
-          : 'As respostas corretas ficam ocultas até ao fecho do jogo.',
+          : 'As respostas corretas ficam ocultas até o jogo finalizar.',
       },
       admin: {
         title: `Administração | ${gameName}`,
-        description: 'Gere jogadores, curiosidades, estado do jogo, estatísticas e exportação de resultados.',
+        description: 'Gere players, curiosidades, status do jogo, stats e export de resultados.',
       },
     }
 
     if (!token || !user) {
-      updatePageMeta('Login | Bingo Humano', 'Descobre curiosidades da equipa, conversa com colegas e participa no desafio Bingo Humano.')
+      updatePageMeta('Login | Bingo Humano', 'Descobre curiosidades da equipa, conversa com colegas e entra no desafio Bingo Humano.')
       return
     }
 
@@ -286,7 +340,10 @@ function App() {
   }, [])
 
   async function loadData(authToken = token) {
-    if (!authToken) return
+    if (!authToken) {
+      setSessionReady(true)
+      return
+    }
 
     setLoading(true)
     try {
@@ -350,6 +407,7 @@ function App() {
         handleLogout()
       }
     } finally {
+      setSessionReady(true)
       setLoading(false)
     }
   }
@@ -370,8 +428,13 @@ function App() {
       setToken(response.token)
       setUser(response.user)
       setCurrentPassword(password)
-      setView(response.user.role === 'admin' ? 'admin' : 'match')
-      setNotice({ tone: 'success', text: response.user.passwordResetRequired ? 'Define uma nova password para continuar.' : 'Login efetuado.' })
+      const requestedView = viewFromPath(window.location.pathname)
+      const nextView = requestedView && (requestedView !== 'admin' || response.user.role === 'admin')
+        ? requestedView
+        : response.user.role === 'admin' ? 'admin' : 'match'
+
+      setView(nextView)
+      setNotice({ tone: 'success', text: response.user.passwordResetRequired ? 'Define uma nova password para continuar.' : 'Login feito.' })
     } catch (error) {
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível entrar.' })
     } finally {
@@ -395,11 +458,14 @@ function App() {
   function handleLogout() {
     localStorage.removeItem('bingo_token')
     setToken('')
+    setSessionReady(true)
     setUser(null)
     setGame(null)
     setCurrentPassword('')
     setNewPassword('')
     setConfirmPassword('')
+    setView('match')
+    syncBrowserPath('/login', 'replace')
   }
 
   async function handleChangePassword(event: FormEvent) {
@@ -439,7 +505,7 @@ function App() {
         method: 'POST',
         body: JSON.stringify({ factId, selectedPersonId: Number(selectedPersonId) }),
       })
-      setNotice({ tone: 'success', text: 'Resposta guardada.' })
+      setNotice({ tone: 'success', text: 'Resposta guardada no board.' })
       await loadData()
     } catch (error) {
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível guardar.' })
@@ -449,7 +515,7 @@ function App() {
   async function deleteGuess(id: number) {
     try {
       await apiRequest(`/guesses/${id}`, token, { method: 'DELETE' })
-      setNotice({ tone: 'success', text: 'Resposta removida.' })
+      setNotice({ tone: 'success', text: 'Resposta removida do board.' })
       await loadData()
     } catch (error) {
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível remover.' })
@@ -468,12 +534,12 @@ function App() {
         method: editingUserId ? 'PUT' : 'POST',
         body: JSON.stringify(body),
       })
-      setNotice({ tone: 'success', text: editingUserId ? 'Jogador atualizado.' : 'Jogador criado.' })
+      setNotice({ tone: 'success', text: editingUserId ? 'Player atualizado.' : 'Player criado.' })
       setEditingUserId(null)
       setUserForm(emptyUserForm)
       await loadData()
     } catch (error) {
-      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao guardar jogador.' })
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao guardar player.' })
     }
   }
 
@@ -495,7 +561,7 @@ function App() {
 
   async function deleteUser(id: number) {
     await apiRequest(`/users/${id}`, token, { method: 'DELETE' })
-    setNotice({ tone: 'success', text: 'Jogador desativado.' })
+    setNotice({ tone: 'success', text: 'Player desativado.' })
     await loadData()
   }
 
@@ -516,20 +582,20 @@ function App() {
           closesAt: toApiDate(gameForm.closesAt),
         }),
       })
-      setNotice({ tone: 'success', text: 'Configuração do jogo atualizada.' })
+      setNotice({ tone: 'success', text: 'Setup do jogo atualizado.' })
       await loadData()
     } catch (error) {
-      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao atualizar jogo.' })
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao atualizar o jogo.' })
     }
   }
 
   async function setGameStatus(status: 'open' | 'close') {
     try {
       await apiRequest(`/game/${status}`, token, { method: 'POST' })
-      setNotice({ tone: 'success', text: status === 'open' ? 'Jogo aberto.' : 'Jogo fechado.' })
+      setNotice({ tone: 'success', text: status === 'open' ? 'Jogo a decorrer.' : 'Jogo finalizado.' })
       await loadData()
     } catch (error) {
-      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao alterar estado.' })
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao atualizar status.' })
     }
   }
 
@@ -557,13 +623,21 @@ function App() {
   }
 
   if (!token || !user) {
+    if (token && !sessionReady) {
+      return (
+        <main className="app-shell session-loading" aria-live="polite">
+          <div className="loading">A sincronizar sessão...</div>
+        </main>
+      )
+    }
+
     return (
       <main className="login-shell">
         <section className="login-panel">
           <div className="brand-mark">BH</div>
-          <p className="eyebrow">Festa de equipa</p>
+          <p className="eyebrow">Team building</p>
           <h1>Bingo Humano</h1>
-          <p className="login-copy">Entra, fala com colegas e tenta ligar cada curiosidade à pessoa certa.</p>
+          <p className="login-copy">Entra, fala com colegas e faz match entre cada curiosidade e a pessoa certa.</p>
           {canInstall && (
             <button className="install-button" type="button" onClick={() => void handleInstallApp()}>
               <Download size={18} /> Instalar app
@@ -639,8 +713,8 @@ function App() {
 
       <section className={`status-strip ${closed ? 'closed' : 'open'}`}>
         <div>
-          <strong>{closed ? 'Jogo fechado' : game?.isOpen ? 'Jogo aberto' : 'Jogo em preparação'}</strong>
-          <span>Até {formatDeadline(game?.closesAt ?? null)}</span>
+          <strong>{closed ? 'Jogo finalizado' : game?.isOpen ? 'Jogo a decorrer' : 'Jogo em setup'}</strong>
+          <span>Deadline: {formatDeadline(game?.closesAt ?? null)}</span>
         </div>
         <div className="progress-ring" aria-label={`${answeredCount} de ${totalFacts} respondidas`}>
           {answeredCount}/{totalFacts}
@@ -658,13 +732,13 @@ function App() {
           <Edit3 size={18} /> Matches
         </button>
         <button className={view === 'mine' ? 'active' : ''} onClick={() => setView('mine')} type="button">
-          <CheckCircle2 size={18} /> Minhas
+          <CheckCircle2 size={18} /> Minhas respostas
         </button>
         <button className={view === 'ranking' ? 'active' : ''} onClick={() => setView('ranking')} type="button">
           <Trophy size={18} /> Ranking
         </button>
         <button className={view === 'answers' ? 'active' : ''} onClick={() => setView('answers')} type="button">
-          <BarChart3 size={18} /> Respostas
+          <BarChart3 size={18} /> Soluções
         </button>
         {isAdmin && (
           <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')} type="button">
@@ -712,7 +786,7 @@ function App() {
                     ))}
                   </select>
                   <span className={guess ? 'match-state done' : 'match-state'}>
-                    {guess ? `Resposta: ${guess.selectedPerson?.name ?? 'guardada'}` : 'Por responder'}
+                    {guess ? `Match: ${guess.selectedPerson?.name ?? 'guardado'}` : 'Por responder'}
                   </span>
                 </article>
               )
@@ -726,7 +800,7 @@ function App() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">As minhas respostas</p>
-              <h2>{closed ? 'Resultado final' : 'Ainda podes alterar enquanto estiver aberto'}</h2>
+              <h2>{closed ? 'Score final' : 'Podes editar enquanto o jogo está a decorrer'}</h2>
             </div>
           </div>
           <div className="answer-list">
@@ -741,7 +815,7 @@ function App() {
                     {closed && result && (
                       <span className={result.isCorrect ? 'result good' : 'result bad'}>
                         {result.isCorrect ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-                        {result.isCorrect ? 'Certa' : `Correta: ${result.correctPerson.name}`}
+                        {result.isCorrect ? 'Resposta certa' : `Resposta correta: ${result.correctPerson.name}`}
                       </span>
                     )}
                   </div>
@@ -749,7 +823,7 @@ function App() {
                 </article>
               )
             })}
-            {!guesses.length && <p className="empty-state">Ainda não submeteste respostas.</p>}
+            {!guesses.length && <p className="empty-state">Ainda não tens respostas submetidas.</p>}
           </div>
         </section>
       )}
@@ -759,7 +833,7 @@ function App() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">Classificação</p>
-              <h2>{closed ? 'Ranking final' : 'Disponível após o fecho'}</h2>
+              <h2>{closed ? 'Ranking final' : 'Disponível quando o jogo finalizar'}</h2>
             </div>
           </div>
           {closed ? (
@@ -769,14 +843,14 @@ function App() {
                   <span className="rank">#{row.position}</span>
                   <div>
                     <strong>{row.playerName}</strong>
-                    <small>{row.correctAnswers} certas · {row.submittedAnswers} submetidas</small>
+                    <small>{row.correctAnswers} corretas · {row.submittedAnswers} submetidas</small>
                   </div>
                   <b>{row.score}</b>
                 </article>
               ))}
             </div>
           ) : (
-            <p className="empty-state">A pontuação fica escondida até ao fim do jogo.</p>
+            <p className="empty-state">O score fica oculto até o jogo finalizar.</p>
           )}
         </section>
       )}
@@ -785,7 +859,7 @@ function App() {
         <section className="screen-stack">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Respostas corretas</p>
+              <p className="eyebrow">Soluções</p>
               <h2>{closed ? 'Mapa final das curiosidades' : 'Bloqueado durante o jogo'}</h2>
             </div>
           </div>
@@ -799,7 +873,7 @@ function App() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">As respostas certas só aparecem depois do fecho.</p>
+            <p className="empty-state">As respostas corretas só aparecem após o jogo finalizar.</p>
           )}
         </section>
       )}
@@ -807,7 +881,7 @@ function App() {
       {view === 'admin' && isAdmin && (
         <section className="screen-stack admin-screen">
           <div className="admin-metrics">
-            <article><Users size={20} /><strong>{stats?.players ?? 0}</strong><span>Jogadores</span></article>
+            <article><Users size={20} /><strong>{stats?.players ?? 0}</strong><span>Players</span></article>
             <article><Edit3 size={20} /><strong>{stats?.facts ?? 0}</strong><span>Curiosidades</span></article>
             <article><BarChart3 size={20} /><strong>{stats?.guesses ?? 0}</strong><span>Respostas</span></article>
           </div>
@@ -815,28 +889,28 @@ function App() {
           <div className="admin-layout">
             <div className="admin-column">
           <form className="admin-panel" onSubmit={submitGame}>
-            <h2>Configuração do jogo</h2>
+            <h2>Setup do jogo</h2>
             <label>Nome<input value={gameForm.name} onChange={(event) => setGameForm({ ...gameForm, name: event.target.value })} /></label>
-            <label>Estado<select value={gameForm.status} onChange={(event) => setGameForm({ ...gameForm, status: event.target.value })}><option value="draft">Draft</option><option value="open">Open</option><option value="closed">Closed</option></select></label>
-            <label>Fecho<input type="datetime-local" value={gameForm.closesAt} onChange={(event) => setGameForm({ ...gameForm, closesAt: event.target.value })} /></label>
+            <label>Status<select value={gameForm.status} onChange={(event) => setGameForm({ ...gameForm, status: event.target.value })}><option value="draft">Draft</option><option value="open">Live</option><option value="closed">Finalizado</option></select></label>
+            <label>Deadline<input type="datetime-local" value={gameForm.closesAt} onChange={(event) => setGameForm({ ...gameForm, closesAt: event.target.value })} /></label>
             <div className="button-row">
               <button className="primary-button" type="submit">Guardar</button>
-              <button className="ghost-button" type="button" onClick={() => void setGameStatus('open')}>Abrir</button>
-              <button className="danger-button" type="button" onClick={() => void setGameStatus('close')}>Fechar</button>
+              <button className="ghost-button" type="button" onClick={() => void setGameStatus('open')}>Colocar live</button>
+              <button className="danger-button" type="button" onClick={() => void setGameStatus('close')}>Finalizar</button>
             </div>
           </form>
 
             <form className="admin-panel" onSubmit={submitUser}>
-              <h2>{editingUserId ? 'Editar jogador' : 'Criar jogador'}</h2>
+              <h2>{editingUserId ? 'Editar player' : 'Criar player'}</h2>
               <label>Nome<input value={userForm.name} onChange={(event) => setUserForm({ ...userForm, name: event.target.value })} required /></label>
               <label>E-mail<input value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} type="email" required /></label>
               <label>Password<input value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} type="password" required={!editingUserId} /></label>
               <label>Role<select value={userForm.role} onChange={(event) => setUserForm({ ...userForm, role: event.target.value as Role })}><option value="player">Player</option><option value="admin">Admin</option></select></label>
-              <button className="primary-button" type="submit">Guardar jogador</button>
+              <button className="primary-button" type="submit">Guardar player</button>
             </form>
 
             <div className="admin-panel admin-list-section">
-              <h2>Lista de utilizadores</h2>
+              <h2>Users</h2>
               <div className="admin-list">
                 {users.map((person) => (
                   <article key={person.id}>
@@ -855,7 +929,7 @@ function App() {
             <form className="admin-panel" onSubmit={submitFact}>
               <h2>{editingFactId ? 'Editar curiosidade' : 'Criar curiosidade'}</h2>
               <label>Curiosidade<textarea value={factForm.text} onChange={(event) => setFactForm({ ...factForm, text: event.target.value })} required /></label>
-              <label>Pessoa correta<select value={factForm.correctPersonId} onChange={(event) => setFactForm({ ...factForm, correctPersonId: event.target.value })} required><option value="">Selecionar</option>{users.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
+              <label>Pessoa correta<select value={factForm.correctPersonId} onChange={(event) => setFactForm({ ...factForm, correctPersonId: event.target.value })} required><option value="">Escolher</option>{users.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
               <button className="primary-button" type="submit">Guardar curiosidade</button>
             </form>
 
@@ -878,7 +952,7 @@ function App() {
             </div>
 
           <div className="admin-panel">
-            <h2>Respostas e exportação</h2>
+            <h2>Respostas e export</h2>
             <button className="primary-button" type="button" onClick={() => void exportCsv()} disabled={!closed}>
               <Download size={18} /> Exportar CSV
             </button>
@@ -895,7 +969,7 @@ function App() {
         </section>
       )}
 
-      {loading && <div className="loading">A atualizar...</div>}
+      {loading && <div className="loading">A sincronizar...</div>}
     </main>
   )
 }
