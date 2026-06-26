@@ -257,7 +257,7 @@ function App() {
   const guessedByFact = new Map(guesses.map((guess) => [guess.factId, guess]))
   const filteredFacts = facts.filter((fact) => fact.text.toLowerCase().includes(factSearch.toLowerCase()))
   const filteredPeople = users.filter((person) => person.name.toLowerCase().includes(personSearch.toLowerCase()))
-  const answerRevealCountdown = getCountdownParts(game?.closesAt ?? null, currentTime)
+  const unlockCountdown = getCountdownParts(game?.closesAt ?? null, currentTime)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -884,7 +884,28 @@ function App() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">O score fica oculto até o jogo finalizar.</p>
+            <div className="reveal-countdown" aria-live="polite">
+              <div>
+                <Clock3 size={22} />
+                <div>
+                  <p className="eyebrow">Unlock do ranking</p>
+                  <h3>{game?.closesAt ? 'Ranking em countdown' : 'Ranking pendente'}</h3>
+                </div>
+              </div>
+              {unlockCountdown ? (
+                <div className="countdown-grid" aria-label={`Tempo até ao desbloqueio do ranking: ${unlockCountdown.map((part) => `${part.value} ${part.label}`).join(', ')}`}>
+                  {unlockCountdown.map((part) => (
+                    <span key={part.label}>
+                      <strong>{part.value}</strong>
+                      <small>{part.label}</small>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p>A equipa de admin ainda não definiu um deadline. Assim que existir, o countdown aparece aqui.</p>
+              )}
+              <p>O score fica em modo stealth até ao final do jogo.</p>
+            </div>
           )}
         </section>
       )}
@@ -912,12 +933,12 @@ function App() {
                 <Clock3 size={22} />
                 <div>
                   <p className="eyebrow">Unlock das soluções</p>
-                  <h3>{game?.closesAt ? 'Countdown até ao reveal' : 'Reveal pendente'}</h3>
+                  <h3>{game?.closesAt ? 'Soluções em countdown' : 'Reveal pendente'}</h3>
                 </div>
               </div>
-              {answerRevealCountdown ? (
-                <div className="countdown-grid" aria-label={`Tempo até as respostas corretas aparecerem: ${answerRevealCountdown.map((part) => `${part.value} ${part.label}`).join(', ')}`}>
-                  {answerRevealCountdown.map((part) => (
+              {unlockCountdown ? (
+                <div className="countdown-grid" aria-label={`Tempo até ao desbloqueio das soluções: ${unlockCountdown.map((part) => `${part.value} ${part.label}`).join(', ')}`}>
+                  {unlockCountdown.map((part) => (
                     <span key={part.label}>
                       <strong>{part.value}</strong>
                       <small>{part.label}</small>
@@ -925,9 +946,9 @@ function App() {
                   ))}
                 </div>
               ) : (
-                <p>Assim que a equipa de admin definir um deadline, mostramos aqui o countdown para o reveal.</p>
+                <p>A equipa de admin ainda não definiu um deadline. Assim que existir, o reveal ganha countdown.</p>
               )}
-              <p>As respostas corretas só aparecem após o jogo finalizar.</p>
+              <p>As respostas corretas entram em reveal automático quando o jogo finalizar.</p>
             </div>
           )}
         </section>
