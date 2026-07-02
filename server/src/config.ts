@@ -13,6 +13,7 @@ export const config = {
     secure: process.env.SMTP_SECURE === 'true',
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
+    tlsRejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
   },
 }
 

@@ -56,11 +56,14 @@ MAIL_FROM="Bingo Humano <no-reply@ddsdev.deloitte.pt>"
 SMTP_HOST="smtp.example.com"
 SMTP_PORT=587
 SMTP_SECURE=false
+SMTP_TLS_REJECT_UNAUTHORIZED=true
 SMTP_USER=""
 SMTP_PASS=""
 ```
 
 Para usar a importacao Excel no backoffice, configurar SMTP real em `server/.env`. O import cria passwords iniciais para novas contas e envia-as por e-mail, por isso a rota rejeita o upload se `SMTP_HOST` e `MAIL_FROM` nao estiverem definidos.
+
+Se o SMTP interno devolver `certificate has expired`, o correto e renovar o certificado no servidor SMTP. Como desbloqueio temporario, definir `SMTP_TLS_REJECT_UNAUTHORIZED=false` em `server/.env` e reiniciar a app.
 
 Para testar o e-mail de boas-vindas sem importar um Excel:
 
