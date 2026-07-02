@@ -821,7 +821,7 @@ function App() {
         </button>
       )}
 
-      <nav className="tabbar" aria-label="Navegação principal">
+      <nav className={`tabbar ${isAdmin ? 'admin-tabs' : 'player-tabs'}`} aria-label="Navegação principal">
         <button className={view === 'match' ? 'active' : ''} onClick={() => setView('match')} type="button">
           <Edit3 size={18} /> Matches
         </button>

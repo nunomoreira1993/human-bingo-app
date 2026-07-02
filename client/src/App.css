@@ -291,7 +291,6 @@ select:disabled {
   bottom: calc(10px + env(safe-area-inset-bottom));
   left: 50%;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
   max-width: 980px;
@@ -302,6 +301,14 @@ select:disabled {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 14px 48px rgba(38, 61, 53, 0.18);
+}
+
+.tabbar.player-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tabbar.admin-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .tabbar button {
