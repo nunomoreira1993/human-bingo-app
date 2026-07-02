@@ -136,7 +136,7 @@ Curiosidades:
 - `POST /api/facts` admin
 - `PUT /api/facts/:id` admin
 - `DELETE /api/facts/:id` admin, desativa a curiosidade
-- `POST /api/admin/import/customer-fest` admin, importa Excel `.xlsx/.xlsm` com e-mail na coluna D e fun fact na coluna F
+- `POST /api/admin/import/customer-fest` admin, importa Excel `.xlsx/.xlsm` com e-mail na coluna D, nome na coluna E quando existir e fun fact na coluna F
 
 Respostas:
 

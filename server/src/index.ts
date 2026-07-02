@@ -178,7 +178,7 @@ async function importCustomerFestRows(rows: CustomerFestRow[]) {
 		if (!user) {
 			const password = generateInitialPassword()
 			const passwordHash = await bcrypt.hash(password, 12)
-			const name = nameFromEmail(row.email)
+			const name = row.name || nameFromEmail(row.email)
 
 			user = await prisma.user.create({
 				data: {
