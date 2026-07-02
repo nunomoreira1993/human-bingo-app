@@ -62,6 +62,14 @@ SMTP_PASS=""
 
 Para usar a importacao Excel no backoffice, configurar SMTP real em `server/.env`. O import cria passwords iniciais para novas contas e envia-as por e-mail, por isso a rota rejeita o upload se `SMTP_HOST` e `MAIL_FROM` nao estiverem definidos.
 
+Para testar o e-mail de boas-vindas sem importar um Excel:
+
+```powershell
+npm run mail:test --workspace server -- --to "teu.email@empresa.com" --name "Nuno"
+```
+
+O teste usa o mesmo template e a mesma configuracao SMTP do import. Se `--password` nao for passado, o script gera uma password temporaria e mostra-a no terminal.
+
 ## Instalar e correr localmente
 
 Neste computador, a instalacao global do Node falhou por permissao do MSI, por isso foi descarregado Node portatil em `.tools/`. Os scripts PowerShell ja o usam se existir.
