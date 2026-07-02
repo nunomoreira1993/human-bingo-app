@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-humano-v1'
+const CACHE_NAME = 'bingo-humano-v2'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/pwa-icon.svg']
 
 self.addEventListener('install', (event) => {

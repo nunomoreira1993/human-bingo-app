@@ -288,12 +288,12 @@ select:disabled {
   position: fixed;
   z-index: 20;
   right: auto;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  bottom: calc(10px + env(safe-area-inset-bottom));
   left: 50%;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
-  width: min(calc(100vw - max(20px, calc(env(safe-area-inset-left) + env(safe-area-inset-right) + 20px))), 980px);
+  width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
   max-width: 980px;
   margin: 0 auto;
   transform: translateX(-50%);
