@@ -267,7 +267,9 @@ function App() {
   const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   const isAdmin = user?.role === 'admin'
-  const closed = Boolean(game?.isClosed)
+  const closedByDeadline = Boolean(game?.closesAt && new Date(game.closesAt).getTime() <= currentTime)
+  const closed = Boolean(game?.isClosed || closedByDeadline)
+  const gameIsOpen = Boolean(game?.isOpen && !closed)
   const activeFacts = facts.filter((fact) => fact.active)
   const activeFactIds = new Set(activeFacts.map((fact) => fact.id))
   const activeGuesses = guesses.filter((guess) => activeFactIds.has(guess.factId))
@@ -553,6 +555,11 @@ function App() {
 
   async function saveGuess(factId: number, selectedPersonId: string) {
     if (!selectedPersonId) return
+
+    if (!gameIsOpen) {
+      setNotice({ tone: 'error', text: 'O jogo já finalizou. Já não é possível alterar respostas.' })
+      return
+    }
 
     try {
       await apiRequest('/guesses', token, {
@@ -863,7 +870,7 @@ function App() {
                 <article className="fact-card" key={fact.id}>
                   <p>{fact.text}</p>
                   <select
-                    disabled={!game?.isOpen}
+                    disabled={!gameIsOpen}
                     value={guess?.selectedPersonId ?? ''}
                     onChange={(event) => void saveGuess(fact.id, event.target.value)}
                   >
