@@ -46,7 +46,8 @@
 
 .login-copy,
 .demo-hint,
-.empty-state {
+.empty-state,
+.admin-help {
   color: var(--muted);
 }
 
@@ -561,6 +562,24 @@ small {
 .admin-metrics span {
   color: var(--muted);
   font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-help {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.import-summary {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(38, 61, 53, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8efe4;
+  color: var(--text-strong);
+  font-size: 13px;
   font-weight: 800;
 }
 

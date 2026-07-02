@@ -50,8 +50,17 @@ DATABASE_URL="mysql://bingo_user:bingo_password@localhost:3306/bingo_humano"
 JWT_SECRET="trocar-por-um-segredo-longo-e-aleatorio"
 PORT=4000
 CORS_ORIGIN="http://localhost:5173"
+APP_PUBLIC_URL="https://bingo.ddsdev.deloitte.pt"
 GAME_CLOSES_AT="2026-06-26T18:00:00+01:00"
+MAIL_FROM="Bingo Humano <no-reply@ddsdev.deloitte.pt>"
+SMTP_HOST="smtp.example.com"
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=""
+SMTP_PASS=""
 ```
+
+Para usar a importacao Excel no backoffice, configurar SMTP real em `server/.env`. O import cria passwords iniciais para novas contas e envia-as por e-mail, por isso a rota rejeita o upload se `SMTP_HOST` e `MAIL_FROM` nao estiverem definidos.
 
 ## Instalar e correr localmente
 
@@ -127,6 +136,7 @@ Curiosidades:
 - `POST /api/facts` admin
 - `PUT /api/facts/:id` admin
 - `DELETE /api/facts/:id` admin, desativa a curiosidade
+- `POST /api/admin/import/customer-fest` admin, importa Excel `.xlsx/.xlsm` com e-mail na coluna D e fun fact na coluna F
 
 Respostas:
 
@@ -153,6 +163,7 @@ Resultados:
 Admin extra:
 
 - `GET /api/admin/stats`
+- Importacao Excel no backoffice cria contas em falta, cria/reativa curiosidades e envia e-mail de boas-vindas com link de login e password inicial.
 
 ## Regras de seguranca e jogo
 

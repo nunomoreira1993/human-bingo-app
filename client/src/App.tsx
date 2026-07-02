@@ -79,6 +79,20 @@ type Stats = {
   averageProgress: number
 }
 
+type ImportSummary = {
+  rowsRead: number
+  usersCreated: number
+  usersExisting: number
+  usersReactivated: number
+  factsCreated: number
+  factsReactivated: number
+  factsSkipped: number
+  emailsSent: number
+  emailsFailed: number
+  skippedRows: Array<{ rowNumber: number; reason: string }>
+  emailFailures: Array<{ email: string; message: string }>
+}
+
 type Notice = {
   tone: 'success' | 'error'
   text: string
@@ -136,8 +150,9 @@ const emptyFactForm = {
 
 async function apiRequest<T>(path: string, token?: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers)
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
 
-  if (options.body && !headers.has('Content-Type')) {
+  if (options.body && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -244,6 +259,8 @@ function App() {
   const [userForm, setUserForm] = useState(emptyUserForm)
   const [editingFactId, setEditingFactId] = useState<number | null>(null)
   const [factForm, setFactForm] = useState(emptyFactForm)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null)
   const [gameForm, setGameForm] = useState({ name: 'Bingo Humano', status: 'draft', closesAt: '' })
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [canInstall, setCanInstall] = useState(false)
@@ -251,11 +268,14 @@ function App() {
 
   const isAdmin = user?.role === 'admin'
   const closed = Boolean(game?.isClosed)
-  const answeredCount = guesses.length
-  const totalFacts = facts.length
+  const activeFacts = facts.filter((fact) => fact.active)
+  const activeFactIds = new Set(activeFacts.map((fact) => fact.id))
+  const activeGuesses = guesses.filter((guess) => activeFactIds.has(guess.factId))
+  const answeredCount = activeGuesses.length
+  const totalFacts = activeFacts.length
   const progress = totalFacts ? Math.round((answeredCount / totalFacts) * 100) : 0
-  const guessedByFact = new Map(guesses.map((guess) => [guess.factId, guess]))
-  const filteredFacts = facts.filter((fact) => fact.text.toLowerCase().includes(factSearch.toLowerCase()))
+  const guessedByFact = new Map(activeGuesses.map((guess) => [guess.factId, guess]))
+  const filteredFacts = activeFacts.filter((fact) => fact.text.toLowerCase().includes(factSearch.toLowerCase()))
   const filteredPeople = users.filter((person) => person.name.toLowerCase().includes(personSearch.toLowerCase()))
   const unlockCountdown = getCountdownParts(game?.closesAt ?? null, currentTime)
 
@@ -590,6 +610,39 @@ function App() {
       await loadData()
     } catch (error) {
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao guardar curiosidade.' })
+    }
+  }
+
+  async function importCustomerFest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!importFile) {
+      setNotice({ tone: 'error', text: 'Escolhe um ficheiro Excel para importar.' })
+      return
+    }
+
+    const form = event.currentTarget
+    const body = new FormData()
+    body.append('file', importFile)
+
+    setLoading(true)
+    try {
+      const response = await apiRequest<{ summary: ImportSummary }>('/admin/import/customer-fest', token, {
+        method: 'POST',
+        body,
+      })
+      setImportSummary(response.summary)
+      setImportFile(null)
+      form.reset()
+      setNotice({
+        tone: response.summary.emailsFailed ? 'error' : 'success',
+        text: `Importação concluída: ${response.summary.usersCreated} contas criadas, ${response.summary.factsCreated} curiosidades criadas, ${response.summary.emailsSent} e-mails enviados.`,
+      })
+      await loadData()
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Erro ao importar Excel.' })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1007,6 +1060,24 @@ function App() {
               <label>Curiosidade<textarea value={factForm.text} onChange={(event) => setFactForm({ ...factForm, text: event.target.value })} required /></label>
               <label>Pessoa correta<select value={factForm.correctPersonId} onChange={(event) => setFactForm({ ...factForm, correctPersonId: event.target.value })} required><option value="">Escolher</option>{users.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
               <button className="primary-button" type="submit">Guardar curiosidade</button>
+            </form>
+
+            <form className="admin-panel" onSubmit={importCustomerFest}>
+              <h2>Importar Customer Fest</h2>
+              <p className="admin-help">Importa um Excel com e-mail na coluna D e fun fact na coluna F. Novas contas recebem password inicial por e-mail.</p>
+              <label>Excel<input type="file" accept=".xlsx,.xlsm" onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} /></label>
+              <button className="primary-button" type="submit" disabled={loading || !importFile}>
+                <Download size={18} /> Importar e enviar e-mails
+              </button>
+              {importSummary && (
+                <div className="import-summary">
+                  <span>{importSummary.rowsRead} linhas válidas</span>
+                  <span>{importSummary.usersCreated} contas criadas · {importSummary.usersExisting} existentes · {importSummary.usersReactivated} reativadas</span>
+                  <span>{importSummary.factsCreated} curiosidades criadas · {importSummary.factsReactivated} reativadas · {importSummary.factsSkipped} duplicadas</span>
+                  <span>{importSummary.emailsSent} e-mails enviados · {importSummary.emailsFailed} falhados</span>
+                  {importSummary.skippedRows.length > 0 && <span>{importSummary.skippedRows.length} linhas ignoradas por dados inválidos</span>}
+                </div>
+              )}
             </form>
 
             <div className="admin-panel admin-list-section">

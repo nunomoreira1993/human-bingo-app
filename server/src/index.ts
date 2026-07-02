@@ -3,13 +3,17 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import bcrypt from 'bcryptjs'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import multer from 'multer'
 import { GameStatus, Role } from '@prisma/client'
 import { ZodError } from 'zod'
 import { requireAdmin, requireAuth, signToken } from './auth'
 import { config } from './config'
+import { parseCustomerFestWorkbook, type CustomerFestRow } from './excelImport'
 import { getGame, isGameClosed, requireGameOpen, serializeGame } from './game'
+import { assertMailConfigured, sendWelcomeEmail } from './mailer'
 import { prisma } from './prisma'
 import type { AuthRequest } from './types'
 import {
@@ -27,6 +31,18 @@ import { asyncHandler, csvEscape, fromRole, parseId, toGameStatus, toRole } from
 
 const app = express()
 const clientDistPath = path.resolve(process.cwd(), '../client/dist')
+const upload = multer({
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 8 * 1024 * 1024 },
+	fileFilter: (_req, file, callback) => {
+		if (/\.(xlsx|xlsm)$/i.test(file.originalname)) {
+			callback(null, true)
+			return
+		}
+
+		callback(Object.assign(new Error('Envie um ficheiro Excel .xlsx ou .xlsm.'), { statusCode: 400 }))
+	},
+})
 
 app.use(helmet())
 app.use(cors({ origin: config.corsOrigin }))
@@ -54,6 +70,21 @@ function publicUser(user: { id: number; name: string }) {
 		id: user.id,
 		name: user.name,
 	}
+}
+
+function nameFromEmail(email: string) {
+	const name = email
+		.split('@')[0]
+		.split(/[._-]+/)
+		.filter(Boolean)
+		.map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+		.join(' ')
+
+	return name || email
+}
+
+function generateInitialPassword() {
+	return crypto.randomBytes(9).toString('base64url')
 }
 
 async function closeGameIfDeadlinePassed() {
@@ -87,6 +118,7 @@ async function buildRanking() {
 		orderBy: { name: 'asc' },
 		include: {
 			guesses: {
+				where: { fact: { active: true } },
 				include: { fact: true },
 			},
 		},
@@ -123,6 +155,83 @@ async function buildRanking() {
 
 		return { ...row, position }
 	})
+}
+
+async function importCustomerFestRows(rows: CustomerFestRow[]) {
+	const welcomeEmails: Array<{ email: string; name: string; password: string }> = []
+	const summary = {
+		rowsRead: rows.length,
+		usersCreated: 0,
+		usersExisting: 0,
+		usersReactivated: 0,
+		factsCreated: 0,
+		factsReactivated: 0,
+		factsSkipped: 0,
+		emailsSent: 0,
+		emailsFailed: 0,
+		emailFailures: [] as Array<{ email: string; message: string }>,
+	}
+
+	for (const row of rows) {
+		let user = await prisma.user.findUnique({ where: { email: row.email } })
+
+		if (!user) {
+			const password = generateInitialPassword()
+			const passwordHash = await bcrypt.hash(password, 12)
+			const name = nameFromEmail(row.email)
+
+			user = await prisma.user.create({
+				data: {
+					name,
+					email: row.email,
+					passwordHash,
+					passwordResetRequired: true,
+					role: Role.PLAYER,
+					active: true,
+				},
+			})
+			summary.usersCreated += 1
+			welcomeEmails.push({ email: user.email, name: user.name, password })
+		} else if (!user.active) {
+			user = await prisma.user.update({ where: { id: user.id }, data: { active: true } })
+			summary.usersReactivated += 1
+		} else {
+			summary.usersExisting += 1
+		}
+
+		const existingFact = await prisma.fact.findFirst({
+			where: { correctPersonId: user.id, text: row.factText },
+		})
+
+		if (!existingFact) {
+			await prisma.fact.create({ data: { text: row.factText, correctPersonId: user.id, active: true } })
+			summary.factsCreated += 1
+		} else if (!existingFact.active) {
+			await prisma.fact.update({ where: { id: existingFact.id }, data: { active: true } })
+			summary.factsReactivated += 1
+		} else {
+			summary.factsSkipped += 1
+		}
+	}
+
+	for (const welcomeEmail of welcomeEmails) {
+		try {
+			await sendWelcomeEmail({
+				to: welcomeEmail.email,
+				name: welcomeEmail.name,
+				password: welcomeEmail.password,
+			})
+			summary.emailsSent += 1
+		} catch (error) {
+			summary.emailsFailed += 1
+			summary.emailFailures.push({
+				email: welcomeEmail.email,
+				message: error instanceof Error ? error.message : 'Erro ao enviar e-mail.',
+			})
+		}
+	}
+
+	return summary
 }
 
 app.get('/api/health', (_req, res) => {
@@ -356,6 +465,30 @@ app.delete(
 	}),
 )
 
+app.post(
+	'/api/admin/import/customer-fest',
+	requireAuth,
+	requireAdmin,
+	upload.single('file'),
+	asyncHandler(async (req, res) => {
+		assertMailConfigured()
+
+		if (!req.file) {
+			return res.status(400).json({ message: 'Envie um ficheiro Excel para importar.' })
+		}
+
+		const { rows, skippedRows } = await parseCustomerFestWorkbook(req.file.buffer)
+		const summary = await importCustomerFestRows(rows)
+
+		return res.status(201).json({
+			summary: {
+				...summary,
+				skippedRows,
+			},
+		})
+	}),
+)
+
 app.get(
 	'/api/guesses',
 	requireAuth,
@@ -379,7 +512,7 @@ app.get(
 	requireAuth,
 	asyncHandler(async (req: AuthRequest, res) => {
 		const guesses = await prisma.guess.findMany({
-			where: { playerId: req.user!.id },
+			where: { playerId: req.user!.id, fact: { active: true } },
 			orderBy: { factId: 'asc' },
 			include: {
 				fact: { select: { id: true, text: true } },
@@ -625,7 +758,7 @@ app.get(
 		const [players, facts, guesses, game] = await Promise.all([
 			prisma.user.count({ where: { role: Role.PLAYER, active: true } }),
 			prisma.fact.count({ where: { active: true } }),
-			prisma.guess.count(),
+			prisma.guess.count({ where: { fact: { active: true } } }),
 			closeGameIfDeadlinePassed(),
 		])
 
